@@ -1,12 +1,22 @@
 #include <windows.h>
+#include <stdlib.h>
+#include <time.h>
+
+#include "mainpaint.h"
+#include "boardpaint.h"
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK ChildWndProc(HWND, UINT, WPARAM, LPARAM);
+
+static char szAppName[]   = "WinProtz";
+static char szChildName[] = "WinProtzChild";
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine, int iCmdShow) {
-    static char szAppName[] = "WinProtz";
     HWND        hwnd;
     MSG         msg;
     WNDCLASSEX  wndclass;
+
+    srand( (unsigned)time( NULL ) );
 
     wndclass.cbSize         = sizeof(wndclass);
     wndclass.style          = CS_HREDRAW | CS_VREDRAW;
@@ -23,13 +33,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine,
 
     RegisterClassEx(&wndclass);
 
+    wndclass.lpfnWndProc    = ChildWndProc;
+    wndclass.hIconSm        = NULL;
+    wndclass.hbrBackground  = (HBRUSH)GetStockObject(BLACK_BRUSH);
+    wndclass.lpszClassName  = szChildName;
+    wndclass.hIconSm        = NULL;
+
+    RegisterClassEx(&wndclass);
+
     hwnd = CreateWindow(szAppName,
                         "Win Protozoa",
-                        WS_OVERLAPPEDWINDOW,
+                        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_BORDER | WS_MINIMIZEBOX,
                         CW_USEDEFAULT,
                         CW_USEDEFAULT,
-                        CW_USEDEFAULT,
-                        CW_USEDEFAULT,
+                        1224,
+                        738,
                         NULL,
                         NULL,
                         hInstance,
@@ -49,18 +67,25 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine,
 LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
     HDC         hdc;
     PAINTSTRUCT ps;
-    RECT        rect;
 
     switch (iMsg) {
-//        case WM_CREATE:
-//            PlaySound("hellowin.wav", NULL, SND_FILENAME | SND_ASYNC);
-//            return 0;
+        case WM_CREATE:
+            onCreate(hwnd, szChildName);
+            return 0;
+
+        case WM_SIZE:
+            cxClient = LOWORD(lParam);
+            cyClient = HIWORD(lParam);
+            return 0;
 
         case WM_PAINT:
             hdc = BeginPaint(hwnd, &ps);
-            GetClientRect(hwnd, &rect);
-            DrawText(hdc, "Hello, Windows!", -1, &rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+//            paint(hdc, hwnd, &ps);
             EndPaint(hwnd, &ps);
+            return 0;
+
+        case WM_COMMAND:
+            InvalidateRect(childHwnd, NULL, TRUE);
             return 0;
 
         case WM_DESTROY:
@@ -69,4 +94,23 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
     }
 
     return DefWindowProc(hwnd, iMsg, wParam, lParam);
+}
+
+LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
+  HDC         hdc;
+  PAINTSTRUCT ps;
+
+  switch (iMsg) {
+      case WM_CREATE:
+          onCreate(hwnd, szChildName);
+          return 0;
+
+      case WM_PAINT:
+          hdc = BeginPaint(hwnd, &ps);
+          paintInitialBacteria(hdc, hwnd, &ps, 5000);
+          EndPaint(hwnd, &ps);
+          return 0;
+  }
+
+  return DefWindowProc(hwnd, iMsg, wParam, lParam);
 }
