@@ -3,6 +3,8 @@
 
 #include <windows.h>
 
-void paintInitialBacteria(HDC hdc, HWND hwnd, PAINTSTRUCT *ps, int count);
+void paintInitialBacteria(HDC hdc, int count);
+
+void paintBoard(HDC hdc, HWND hwnd, PAINTSTRUCT *ps);
 
 #endif

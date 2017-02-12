@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <time.h>
 
 #include "mainpaint.h"
@@ -11,12 +12,18 @@ LRESULT CALLBACK ChildWndProc(HWND, UINT, WPARAM, LPARAM);
 static char szAppName[]   = "WinProtz";
 static char szChildName[] = "WinProtzChild";
 
+FILE *out;
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine, int iCmdShow) {
     HWND        hwnd;
     MSG         msg;
     WNDCLASSEX  wndclass;
 
     srand( (unsigned)time( NULL ) );
+
+    if(AllocConsole()) {
+      out = freopen("CONOUT$", "w", stdout);
+    }
 
     wndclass.cbSize         = sizeof(wndclass);
     wndclass.style          = CS_HREDRAW | CS_VREDRAW;
@@ -61,6 +68,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine,
         DispatchMessage(&msg);
     }
 
+    fclose(out);
+
     return msg.wParam;
 }
 
@@ -79,13 +88,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
             return 0;
 
         case WM_PAINT:
+            printf("Got WM_PAINT in main\n");
             hdc = BeginPaint(hwnd, &ps);
-//            paint(hdc, hwnd, &ps);
+            paintMain(hdc, hwnd, &ps);
             EndPaint(hwnd, &ps);
             return 0;
 
         case WM_COMMAND:
-            InvalidateRect(childHwnd, NULL, TRUE);
+            printf("Got WM_COMMAND in main\n");
+            hdc = GetDC(childHwnd);
+            paintInitialBacteria(hdc, 5000);
+            ReleaseDC(childHwnd, hdc);
+            InvalidateRect(childHwnd, NULL, FALSE);
             return 0;
 
         case WM_DESTROY:
@@ -101,15 +115,16 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam
   PAINTSTRUCT ps;
 
   switch (iMsg) {
-      case WM_CREATE:
-          onCreate(hwnd, szChildName);
-          return 0;
-
       case WM_PAINT:
+          printf("Got WM_PAINT in child\n");
           hdc = BeginPaint(hwnd, &ps);
-          paintInitialBacteria(hdc, hwnd, &ps, 5000);
+          paintBoard(hdc, hwnd, &ps);
           EndPaint(hwnd, &ps);
           return 0;
+
+//      case WM_ERASEBKGND:
+//          return 1;
+
   }
 
   return DefWindowProc(hwnd, iMsg, wParam, lParam);

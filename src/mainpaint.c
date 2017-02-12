@@ -5,14 +5,12 @@
 int cxClient = 0;
 int cyClient = 0;
 
-HWND childHwnd;
+HWND childHwnd = NULL;
 HWND startPushButtonHwnd;
 
 TEXTMETRIC tm;
 
 void onCreate(HWND hwnd, char *ChildWndClass) {
-//  HDC hdc = GetDC(hwnd);
-
   childHwnd = CreateWindow(
     ChildWndClass,
     NULL,
@@ -29,18 +27,7 @@ void onCreate(HWND hwnd, char *ChildWndClass) {
     CHILD_WND_WIDTH + 5 + 25, 15, 50, 26, hwnd, (HMENU)1, (HINSTANCE)GetWindowLong(hwnd, GWL_HINSTANCE), NULL);
 
   InvalidateRect(childHwnd, NULL, TRUE);
-//  ReleaseDC(hwnd, hdc);
 }
 
-void paint(HDC hdc, HWND hwnd, PAINTSTRUCT *ps) {
-/*  RECT        rect;
-  char        buff[100];
-  int         len;
-
-  HDC displayHdc;
-
-  GetClientRect(hwnd, &rect);
-  //DrawText(hdc, "Hello, Windows!", -1, &rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
-  len = wsprintf(buff, "Client area: %dx%d", rect.right, rect.bottom);
-  TextOut(hdc, cxClient - ((len + 2) * tm.tmAveCharWidth), cyClient - (10 + tm.tmHeight + tm.tmExternalLeading), buff, len);*/
+void paintMain(HDC hdc, HWND hwnd, PAINTSTRUCT *ps) {
 }

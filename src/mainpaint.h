@@ -12,7 +12,7 @@ extern HWND startPushButtonHwnd;
 #define CHILD_WND_WIDTH   800
 #define CHILD_WND_HEIGHT  700
 
-void paint(HDC hdc, HWND hwnd, PAINTSTRUCT *ps);
+void paintMain(HDC hdc, HWND hwnd, PAINTSTRUCT *ps);
 
 void onCreate(HWND hwnd, char *ChildWndClass);
 
