@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <process.h>
-//#include <stdio.h>
+#include <stdio.h>
 
 #include "mainpaint.h"
 #include "boardpaint.h"
@@ -20,9 +20,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine,
     MSG         msg;
     WNDCLASSEX  wndclass;
 
-//    if(AllocConsole()) {
-//      freopen("CONOUT$", "w", stdout);
-//    }
+    if(AllocConsole()) {
+      freopen("CONOUT$", "w", stdout);
+    }
 
 //    srand( (unsigned)time( NULL ) );
     //srand(time(NULL));

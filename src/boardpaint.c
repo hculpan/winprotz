@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 HBITMAP backbuffer = NULL;
+HDC backbuffDC = NULL;
 
 COLORREF bacteriaColor = RGB(0, 255, 0);
 
@@ -33,14 +34,10 @@ int bugCount = 0;
 
 long cycle;
 
-void updateBoard(HDC hdc, HDC *backbuffDC) {
-  int bitsperpixel;
-
+void updateBoard(HDC hdc) {
   if (backbuffer) {
-    bitsperpixel = GetDeviceCaps(*backbuffDC, BITSPIXEL);
-
-    SelectObject(*backbuffDC, backbuffer);
-    BitBlt(hdc, 0, 0, CHILD_WND_WIDTH, CHILD_WND_HEIGHT, *backbuffDC, 0, 0, SRCCOPY);
+    SelectObject(backbuffDC, backbuffer);
+    BitBlt(hdc, 0, 0, CHILD_WND_WIDTH, CHILD_WND_HEIGHT, backbuffDC, 0, 0, SRCCOPY);
   }
 }
 
@@ -55,20 +52,20 @@ void paintBoard(HDC hdc) {
   DeleteDC(tempDC);
 }
 
-VOID AddRandomBacteria(HDC *hdc) {
+VOID AddRandomBacteria() {
   int x, y;
 
   while (TRUE) {
     x = rand()%CHILD_WND_WIDTH;
     y = rand()%CHILD_WND_HEIGHT;
-    if (GetPixel(*hdc, x, y) != bacteriaColor) {
-      SetPixel(*hdc, x, y, bacteriaColor);
+    if (GetPixel(backbuffDC, x, y) != bacteriaColor) {
+      SetPixel(backbuffDC, x, y, bacteriaColor);
       break;
     }
   }
 }
 
-VOID paintInitialBacteria(HDC hdc, HDC *backbuffDC, int count) {
+VOID paintInitialBacteria(HDC hdc, int count) {
   int i;
   RECT rect;
 
@@ -82,77 +79,35 @@ VOID paintInitialBacteria(HDC hdc, HDC *backbuffDC, int count) {
   rect.top = 0;
   rect.bottom = CHILD_WND_HEIGHT;
 
-  SelectObject(*backbuffDC, backbuffer);
+  SelectObject(backbuffDC, backbuffer);
   for (i = 0; i < count; i++) {
-    AddRandomBacteria(backbuffDC);
+    AddRandomBacteria();
   }
 }
 
-VOID createInitialBugs() {
-  int i, x, y;
-  struct Bug *newBug = NULL, *lastBug = NULL;
-
-  for (i = 0; i < startingBugCount; i++) {
-    newBug = malloc(sizeof(struct Bug));
-    bugCount += 1;
-    newBug->prev = lastBug;
-
-    while (TRUE) {
-      x = rand()%CHILD_WND_WIDTH;
-      y = rand()%CHILD_WND_HEIGHT;
-      if (x > 0 && x < CHILD_WND_WIDTH - 1 && y > 0 && y < CHILD_WND_HEIGHT - 1) {
-        newBug->x = x;
-        newBug->y = y;
-        break;
-      }
-    }
-
-    newBug->dir = rand()%6;
-    newBug->gene[0] = rand()%6;
-    newBug->gene[1] = rand()%6;
-    newBug->gene[2] = rand()%6;
-    newBug->gene[3] = rand()%6;
-    newBug->gene[4] = rand()%6;
-    newBug->gene[5] = rand()%6;
-    newBug->health = 800;
-    newBug->age = 0;
-    newBug->geneTotal = newBug->gene[0] + newBug->gene[1] + newBug->gene[2] + newBug->gene[3] + newBug->gene[4] + newBug->gene[5];
-    newBug->next = NULL;
-
-    if (i == 0) {
-      firstBug = newBug;
-      lastBug = firstBug;
-    } else {
-      lastBug->next = newBug;
-      lastBug = newBug;
-    }
-  }
-}
-
-VOID removeBacteria(int x, int y, struct Bug *bug, HDC *backbuffDC) {
-//  SetPixel(*backbuffDC, x, y, RGB(0, 0, 0));
+VOID removeBacteria(int x, int y, struct Bug *bug) {
   bug->health += 40;
   if (bug->health > 1500) {
     bug->health = 1500;
   }
 }
 
-VOID bugsEatBacteria(HDC *backbuffDC) {
+VOID bugsEatBacteria() {
   int x, y;
   struct Bug *bug = firstBug;
 
   while (bug) {
     x = bug->x;
     y = bug->y;
-    if (GetPixel(*backbuffDC, x - 1, y - 1) == bacteriaColor) removeBacteria(x - 1, y - 1, bug, backbuffDC);
-    if (GetPixel(*backbuffDC, x    , y - 1) == bacteriaColor) removeBacteria(x    , y - 1, bug, backbuffDC);
-    if (GetPixel(*backbuffDC, x + 1, y - 1) == bacteriaColor) removeBacteria(x + 1, y - 1, bug, backbuffDC);
-    if (GetPixel(*backbuffDC, x - 1, y    ) == bacteriaColor) removeBacteria(x - 1, y    , bug, backbuffDC);
-    if (GetPixel(*backbuffDC, x    , y    ) == bacteriaColor) removeBacteria(x    , y    , bug, backbuffDC);
-    if (GetPixel(*backbuffDC, x + 1, y    ) == bacteriaColor) removeBacteria(x + 1, y    , bug, backbuffDC);
-    if (GetPixel(*backbuffDC, x - 1, y + 1) == bacteriaColor) removeBacteria(x - 1, y + 1, bug, backbuffDC);
-    if (GetPixel(*backbuffDC, x    , y + 1) == bacteriaColor) removeBacteria(x    , y + 1, bug, backbuffDC);
-    if (GetPixel(*backbuffDC, x + 1, y + 1) == bacteriaColor) removeBacteria(x + 1, y + 1, bug, backbuffDC);
+    if (GetPixel(backbuffDC, x - 1, y - 1) == bacteriaColor) removeBacteria(x - 1, y - 1, bug);
+    if (GetPixel(backbuffDC, x    , y - 1) == bacteriaColor) removeBacteria(x    , y - 1, bug);
+    if (GetPixel(backbuffDC, x + 1, y - 1) == bacteriaColor) removeBacteria(x + 1, y - 1, bug);
+    if (GetPixel(backbuffDC, x - 1, y    ) == bacteriaColor) removeBacteria(x - 1, y    , bug);
+    if (GetPixel(backbuffDC, x    , y    ) == bacteriaColor) removeBacteria(x    , y    , bug);
+    if (GetPixel(backbuffDC, x + 1, y    ) == bacteriaColor) removeBacteria(x + 1, y    , bug);
+    if (GetPixel(backbuffDC, x - 1, y + 1) == bacteriaColor) removeBacteria(x - 1, y + 1, bug);
+    if (GetPixel(backbuffDC, x    , y + 1) == bacteriaColor) removeBacteria(x    , y + 1, bug);
+    if (GetPixel(backbuffDC, x + 1, y + 1) == bacteriaColor) removeBacteria(x + 1, y + 1, bug);
 
     bug = bug->next;
   }
@@ -192,7 +147,7 @@ VOID moveBugs() {
   }
 }
 
-VOID eraseBugs(HDC *backbuffDC) {
+VOID eraseBugs() {
   struct Bug *bug = firstBug;
   RECT rect;
   HBRUSH brush = (HBRUSH)GetStockObject(BLACK_BRUSH);
@@ -202,13 +157,13 @@ VOID eraseBugs(HDC *backbuffDC) {
     rect.top = bug->y - 1;
     rect.right = bug->x + 2;
     rect.bottom = bug->y + 2;
-    FillRect(*backbuffDC, &rect, brush);
+    FillRect(backbuffDC, &rect, brush);
 
     bug = bug->next;
   }
 }
 
-VOID drawBugs(HDC *backbuffDC) {
+VOID drawBugs() {
   struct Bug *bug = firstBug;
   RECT rect;
   HBRUSH brush = CreateSolidBrush(RGB(100, 100, 255));
@@ -218,7 +173,7 @@ VOID drawBugs(HDC *backbuffDC) {
     rect.top = bug->y - 1;
     rect.right = bug->x + 2;
     rect.bottom = bug->y + 2;
-    FillRect(*backbuffDC, &rect, brush);
+    FillRect(backbuffDC, &rect, brush);
 
     bug = bug->next;
   }
@@ -242,26 +197,53 @@ VOID selectNewDirection() {
   }
 }
 
+VOID insertAfter(struct Bug *bug, struct Bug *newBug) {
+  if (!newBug) return;
+
+  newBug->next = NULL;
+  newBug->prev = NULL;
+
+  if (!bug) {
+    firstBug = newBug;
+  } else {
+    if (bug->next) bug->next->prev = newBug;
+    newBug->next = bug->next;
+    newBug->prev = bug;
+    bug->next = newBug;
+  }
+}
+
+struct Bug * deleteBug(struct Bug *bug) {
+  struct Bug *result;
+
+  if (!bug) return NULL;
+
+  if (bug->prev) bug->prev->next = bug->next;
+  if (bug->next) bug->next->prev = bug->prev;
+
+  if (bug == firstBug) {
+    firstBug = bug->next;
+    if (firstBug) firstBug->prev = NULL;
+  }
+
+  result = bug->next;
+
+  free(bug);
+
+  return result;
+}
+
 VOID doCycleStuff() {
   int i, gnum;
   struct Bug *bug = firstBug, *newBug, *nextBug;
 
   bugCount = 0;
-  cycle += 1;
   while (bug) {
     bug->age += 1;
     bug->health -= 1;
 
     if (bug->health <= 0) {
-      nextBug = bug->next;
-      if (bug->prev) bug->prev->next = bug->next;
-      if (bug->next) bug->next->prev = bug->prev;
-      free(bug);
-      if (bug == firstBug) {
-        firstBug = nextBug;
-        if (firstBug) firstBug->prev = NULL;
-      }
-      bug = nextBug;
+      bug = deleteBug(bug);
     } else if (bug->health >= 1000 && bug->age >= 800) {
       newBug = malloc(sizeof(struct Bug));
       newBug->health = bug->health / 2;
@@ -278,8 +260,6 @@ VOID doCycleStuff() {
       gnum = rand()%6;
       newBug->gene[gnum] = ((newBug->gene[gnum] - 1) + 6) % 6;
       newBug->geneTotal = newBug->gene[0] + newBug->gene[1] + newBug->gene[2] + newBug->gene[3] + newBug->gene[4] + newBug->gene[5];
-      newBug->next = bug->next;
-      newBug->prev = bug;
 
       bug->health = bug->health / 2;
       bug->age = 0;
@@ -288,10 +268,10 @@ VOID doCycleStuff() {
       gnum = rand()%6;
       bug->gene[gnum] = ((bug->gene[gnum] - 1) + 6) % 6;
       bug->geneTotal = bug->gene[0] + bug->gene[1] + bug->gene[2] + bug->gene[3] + bug->gene[4] + bug->gene[5];
-      bug->next = newBug;
+
+      insertAfter(bug, newBug);
 
       bugCount += 2;
-      bug = newBug->next;
     } else {
       bug = bug->next;
       bugCount += 1;
@@ -300,6 +280,41 @@ VOID doCycleStuff() {
 
   if (cycle % 10 == 0) {
     InvalidateRect(reportHwnd, NULL, TRUE);
+  }
+}
+
+VOID createInitialBugs() {
+  int i, x, y;
+  struct Bug *newBug, *lastBug = NULL;
+  newBug = NULL;
+
+  for (i = 0; i < startingBugCount; i++) {
+    newBug = malloc(sizeof(struct Bug));
+    bugCount += 1;
+
+    while (TRUE) {
+      x = rand()%CHILD_WND_WIDTH;
+      y = rand()%CHILD_WND_HEIGHT;
+      if (x > 0 && x < CHILD_WND_WIDTH - 1 && y > 0 && y < CHILD_WND_HEIGHT - 1) {
+        newBug->x = x;
+        newBug->y = y;
+        break;
+      }
+    }
+
+    newBug->dir = rand()%6;
+    newBug->gene[0] = rand()%6;
+    newBug->gene[1] = rand()%6;
+    newBug->gene[2] = rand()%6;
+    newBug->gene[3] = rand()%6;
+    newBug->gene[4] = rand()%6;
+    newBug->gene[5] = rand()%6;
+    newBug->health = 800;
+    newBug->age = 0;
+    newBug->geneTotal = newBug->gene[0] + newBug->gene[1] + newBug->gene[2] + newBug->gene[3] + newBug->gene[4] + newBug->gene[5];
+
+    insertAfter(lastBug, newBug);
+    lastBug = newBug;
   }
 }
 
@@ -314,18 +329,17 @@ VOID reportStuff(HWND hwnd, HDC hdc) {
   TextOut(hdc, 5, 35, msg, len);
 }
 
-VOID processBugs(HDC *backbuffDC) {
-  eraseBugs(backbuffDC);
+VOID processBugs() {
+  eraseBugs();
   doCycleStuff();
   selectNewDirection();
   moveBugs();
-  bugsEatBacteria(backbuffDC);
-  drawBugs(backbuffDC);
+  bugsEatBacteria();
+  drawBugs();
 }
 
 VOID Thread(PVOID pvoid) {
   HDC hdc = GetDC(childHwnd);
-  HDC backbuffDC;
   struct Bug *bug, *nextBug;
 
   //srand(time(NULL))0;
@@ -333,22 +347,29 @@ VOID Thread(PVOID pvoid) {
 
   backbuffDC = CreateCompatibleDC(hdc);
   createInitialBugs();
-  paintInitialBacteria(hdc, &backbuffDC, 5000);
-  processBugs(&backbuffDC);
-  updateBoard(hdc, &backbuffDC);
+  paintInitialBacteria(hdc, 5000);
+  processBugs();
+  updateBoard(hdc);
   InvalidateRect(reportHwnd, NULL, TRUE);
 
   while (ThreadRun) {
 //    Sleep(50);
-    AddRandomBacteria(&backbuffDC);
-    AddRandomBacteria(&backbuffDC);
-    AddRandomBacteria(&backbuffDC);
-    processBugs(&backbuffDC);
+    cycle += 1;
+    AddRandomBacteria();
+    AddRandomBacteria();
+    AddRandomBacteria();
+    processBugs();
     if (bugCount <= 0) {
+      printf("BugCount 0!\n");
       break;
     }
-    updateBoard(hdc, &backbuffDC);
+    updateBoard(hdc);
+    if (cycle % 100 == 0) {
+      printf("Hit cycle %d\n", cycle);
+    }
   }
+
+  printf("Done with loop\n");
 
   DeleteDC(backbuffDC);
   backbuffDC = NULL;
