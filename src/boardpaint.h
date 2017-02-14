@@ -3,8 +3,16 @@
 
 #include <windows.h>
 
-void paintInitialBacteria(HDC hdc, int count);
+void paintBoard(HDC hdc);
 
-void paintBoard(HDC hdc, HWND hwnd, PAINTSTRUCT *ps);
+VOID Thread(PVOID pvoid);
+
+VOID reportStuff(HWND hwnd, HDC hdc);
+
+extern BOOL ThreadRun;
+
+extern long cycle;
+
+extern int bugCount;
 
 #endif

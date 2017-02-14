@@ -1,29 +1,32 @@
 #include <windows.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <time.h>
+#include <process.h>
+//#include <stdio.h>
 
 #include "mainpaint.h"
 #include "boardpaint.h"
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK ChildWndProc(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK ReportWndProc(HWND, UINT, WPARAM, LPARAM);
 
 static char szAppName[]   = "WinProtz";
 static char szChildName[] = "WinProtzChild";
-
-FILE *out;
+static char szReportName[] = "WinProtzReport";
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine, int iCmdShow) {
     HWND        hwnd;
     MSG         msg;
     WNDCLASSEX  wndclass;
 
-    srand( (unsigned)time( NULL ) );
+//    if(AllocConsole()) {
+//      freopen("CONOUT$", "w", stdout);
+//    }
 
-    if(AllocConsole()) {
-      out = freopen("CONOUT$", "w", stdout);
-    }
+//    srand( (unsigned)time( NULL ) );
+    //srand(time(NULL));
+    srand(1);
 
     wndclass.cbSize         = sizeof(wndclass);
     wndclass.style          = CS_HREDRAW | CS_VREDRAW;
@@ -48,12 +51,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine,
 
     RegisterClassEx(&wndclass);
 
+    wndclass.lpfnWndProc    = ReportWndProc;
+    wndclass.hbrBackground  = (HBRUSH)GetStockObject(WHITE_BRUSH);
+    wndclass.lpszClassName  = szReportName;
+
+    RegisterClassEx(&wndclass);
+
     hwnd = CreateWindow(szAppName,
                         "Win Protozoa",
                         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_BORDER | WS_MINIMIZEBOX,
                         CW_USEDEFAULT,
                         CW_USEDEFAULT,
-                        1224,
+                        1024,
                         738,
                         NULL,
                         NULL,
@@ -68,8 +77,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine,
         DispatchMessage(&msg);
     }
 
-    fclose(out);
-
     return msg.wParam;
 }
 
@@ -79,7 +86,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
 
     switch (iMsg) {
         case WM_CREATE:
-            onCreate(hwnd, szChildName);
+            onCreate(hwnd, szChildName, szReportName);
             return 0;
 
         case WM_SIZE:
@@ -88,18 +95,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
             return 0;
 
         case WM_PAINT:
-            printf("Got WM_PAINT in main\n");
             hdc = BeginPaint(hwnd, &ps);
             paintMain(hdc, hwnd, &ps);
             EndPaint(hwnd, &ps);
             return 0;
 
         case WM_COMMAND:
-            printf("Got WM_COMMAND in main\n");
-            hdc = GetDC(childHwnd);
-            paintInitialBacteria(hdc, 5000);
-            ReleaseDC(childHwnd, hdc);
-            InvalidateRect(childHwnd, NULL, FALSE);
+            if (wParam == IDC_START_BUTTON) {
+              ThreadRun = TRUE;
+              EnableWindow(startPushButtonHwnd, FALSE);
+              EnableWindow(stopPushButtonHwnd, TRUE);
+              _beginthread(Thread, 0, NULL);
+            } else if (wParam == IDC_STOP_BUTTON) {
+              EnableWindow(startPushButtonHwnd, TRUE);
+              EnableWindow(stopPushButtonHwnd, FALSE);
+              ThreadRun = FALSE;
+            }
             return 0;
 
         case WM_DESTROY:
@@ -116,9 +127,29 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam
 
   switch (iMsg) {
       case WM_PAINT:
-          printf("Got WM_PAINT in child\n");
           hdc = BeginPaint(hwnd, &ps);
-          paintBoard(hdc, hwnd, &ps);
+          if (!ThreadRun) {
+            paintBoard(hdc);
+          }
+          EndPaint(hwnd, &ps);
+          return 0;
+
+//      case WM_ERASEBKGND:
+//          return 1;
+
+  }
+
+  return DefWindowProc(hwnd, iMsg, wParam, lParam);
+}
+
+LRESULT CALLBACK ReportWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
+  HDC         hdc;
+  PAINTSTRUCT ps;
+
+  switch (iMsg) {
+      case WM_PAINT:
+          hdc = BeginPaint(hwnd, &ps);
+          reportStuff(hwnd, hdc);
           EndPaint(hwnd, &ps);
           return 0;
 
