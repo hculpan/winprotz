@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <process.h>
-#include <stdio.h>
+//#include <stdio.h>
 
 #include "mainpaint.h"
 #include "boardpaint.h"
@@ -20,13 +20,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine,
     MSG         msg;
     WNDCLASSEX  wndclass;
 
-    if(AllocConsole()) {
-      freopen("CONOUT$", "w", stdout);
-    }
+//    if(AllocConsole()) {
+//      freopen("CONOUT$", "w", stdout);
+//    }
 
 //    srand( (unsigned)time( NULL ) );
-    //srand(time(NULL));
-    srand(1);
+    srand(time(NULL));
+    //srand(1);
 
     wndclass.cbSize         = sizeof(wndclass);
     wndclass.style          = CS_HREDRAW | CS_VREDRAW;
@@ -36,7 +36,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine,
     wndclass.hInstance      = hInstance;
     wndclass.hIcon          = LoadIcon(NULL, IDI_APPLICATION);
     wndclass.hCursor        = LoadCursor(NULL, IDC_ARROW);
-    wndclass.hbrBackground  = (HBRUSH)GetStockObject(WHITE_BRUSH);
+    wndclass.hbrBackground  = (HBRUSH)COLOR_WINDOW;
     wndclass.lpszMenuName   = NULL;
     wndclass.lpszClassName  = szAppName;
     wndclass.hIconSm        = LoadIcon(NULL, IDI_APPLICATION);
@@ -105,10 +105,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
               ThreadRun = TRUE;
               EnableWindow(startPushButtonHwnd, FALSE);
               EnableWindow(stopPushButtonHwnd, TRUE);
+              EnableWindow(writeLogHwnd, FALSE);
               _beginthread(Thread, 0, NULL);
             } else if (wParam == IDC_STOP_BUTTON) {
               EnableWindow(startPushButtonHwnd, TRUE);
               EnableWindow(stopPushButtonHwnd, FALSE);
+              EnableWindow(writeLogHwnd, TRUE);
               ThreadRun = FALSE;
             }
             return 0;

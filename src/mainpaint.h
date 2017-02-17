@@ -10,6 +10,7 @@ extern HWND childHwnd;
 extern HWND reportHwnd;
 extern HWND startPushButtonHwnd;
 extern HWND stopPushButtonHwnd;
+extern HWND writeLogHwnd;
 
 #define CHILD_WND_WIDTH   700
 #define CHILD_WND_HEIGHT  700

@@ -9,6 +9,7 @@ HWND childHwnd = NULL;
 HWND reportHwnd = NULL;
 HWND startPushButtonHwnd;
 HWND stopPushButtonHwnd;
+HWND writeLogHwnd;
 
 TEXTMETRIC tm;
 
@@ -43,6 +44,9 @@ void onCreate(HWND hwnd, char *ChildWndClass, char *ReportWndClass) {
   stopPushButtonHwnd = CreateWindow("button", "Stop", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
     CHILD_WND_WIDTH + 5 + 25 + 50 + 10, 15, 50, 26, hwnd, (HMENU)IDC_STOP_BUTTON, (HINSTANCE)GetWindowLong(hwnd, GWL_HINSTANCE), NULL);
   EnableWindow(stopPushButtonHwnd, FALSE);
+
+  writeLogHwnd = CreateWindow("button", "Write log", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+    CHILD_WND_WIDTH + 5 + 25, 55, 100, 26, hwnd, (HMENU)0, (HINSTANCE)GetWindowLong(hwnd, GWL_HINSTANCE), NULL);
 
   InvalidateRect(childHwnd, NULL, TRUE);
   InvalidateRect(reportHwnd, NULL, TRUE);
