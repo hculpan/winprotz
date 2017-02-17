@@ -15,4 +15,14 @@ extern long cycle;
 
 extern int bugCount;
 
+typedef struct SimParams {
+  int toroidal;
+  int worldWidth;
+  int worldHeight;
+  int startingBacteria;
+  int startingBugs;
+  int reseedRate;
+  int delay;
+} SimParams;
+
 #endif

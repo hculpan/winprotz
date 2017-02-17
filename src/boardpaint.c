@@ -18,6 +18,8 @@ BOOL ThreadRun = FALSE;
 
 FILE *outf;
 
+SimParams simParams;
+
 struct Bug {
   int id;
   int x;
@@ -32,18 +34,23 @@ struct Bug {
 
   int geneTotal;
 
-  HBRUSH brush;
+  int brushIndex;
 
   struct Bug *next;
   struct Bug *prev;
 };
 
+COLORREF bugColor[] = {
+  RGB(100, 100, 255),   // blue
+  RGB(255, 100, 100),   // red
+  RGB(60, 196, 191),    // cyan
+  RGB(255, 255, 255)    // white
+};
 HBRUSH bugBrush[4];
 
 struct Bug *firstBug;
 struct Bug *currentBug;
 
-int startingBugCount = 20;
 int bugCount = 0;
 int lastBugId = 1;
 
@@ -122,6 +129,26 @@ VOID removeBacteria(int x, int y, struct Bug *bug) {
   }
 }
 
+int px(int vx) {
+  if (vx < 0) {
+    return vx + simParams.worldWidth;
+  } else if (vx >= simParams.worldWidth - 1) {
+    return vx % simParams.worldWidth;
+  } else {
+    return vx;
+  }
+}
+
+int py(int vy) {
+  if (vy < 0) {
+    return vy + simParams.worldHeight;
+  } else if (vy >= simParams.worldHeight - 1) {
+    return vy % simParams.worldHeight;
+  } else {
+    return vy;
+  }
+}
+
 VOID bugsEatBacteria() {
   int x, y;
   struct Bug *bug;
@@ -131,15 +158,24 @@ VOID bugsEatBacteria() {
   while (bug = nextBug()) {
     x = bug->x;
     y = bug->y;
-    if (GetPixel(backbuffDC, x - 1, y - 1) == bacteriaColor) removeBacteria(x - 1, y - 1, bug);
-    if (GetPixel(backbuffDC, x    , y - 1) == bacteriaColor) removeBacteria(x    , y - 1, bug);
-    if (GetPixel(backbuffDC, x + 1, y - 1) == bacteriaColor) removeBacteria(x + 1, y - 1, bug);
-    if (GetPixel(backbuffDC, x - 1, y    ) == bacteriaColor) removeBacteria(x - 1, y    , bug);
-    if (GetPixel(backbuffDC, x    , y    ) == bacteriaColor) removeBacteria(x    , y    , bug);
-    if (GetPixel(backbuffDC, x + 1, y    ) == bacteriaColor) removeBacteria(x + 1, y    , bug);
-    if (GetPixel(backbuffDC, x - 1, y + 1) == bacteriaColor) removeBacteria(x - 1, y + 1, bug);
-    if (GetPixel(backbuffDC, x    , y + 1) == bacteriaColor) removeBacteria(x    , y + 1, bug);
-    if (GetPixel(backbuffDC, x + 1, y + 1) == bacteriaColor) removeBacteria(x + 1, y + 1, bug);
+    if (GetPixel(backbuffDC, px(x - 1), py(y - 1)) == bacteriaColor)
+      removeBacteria(px(x - 1), py(y - 1), bug);
+    if (GetPixel(backbuffDC, px(x    ), py(y - 1)) == bacteriaColor)
+      removeBacteria(px(x    ), py(y - 1), bug);
+    if (GetPixel(backbuffDC, px(x + 1), py(y - 1)) == bacteriaColor)
+      removeBacteria(px(x + 1), py(y - 1), bug);
+    if (GetPixel(backbuffDC, px(x - 1), py(y    )) == bacteriaColor)
+      removeBacteria(px(x - 1), py(y    ), bug);
+    if (GetPixel(backbuffDC, px(x    ), py(y    )) == bacteriaColor)
+      removeBacteria(px(x    ), py(y    ), bug);
+    if (GetPixel(backbuffDC, px(x + 1), py(y    )) == bacteriaColor)
+      removeBacteria(px(x + 1), py(y    ), bug);
+    if (GetPixel(backbuffDC, px(x - 1), py(y + 1)) == bacteriaColor)
+      removeBacteria(px(x - 1), py(y + 1), bug);
+    if (GetPixel(backbuffDC, px(x    ), py(y + 1)) == bacteriaColor)
+      removeBacteria(px(x    ), py(y + 1), bug);
+    if (GetPixel(backbuffDC, px(x + 1), py(y + 1)) == bacteriaColor)
+      removeBacteria(px(x + 1), py(y + 1), bug);
   }
 }
 
@@ -216,40 +252,76 @@ VOID moveBugs() {
       case 5: bug->x -= 2; bug->y += 1; break;
     }
 
-    // Bump walls
-    if (bug->x <= 0) {
-      bug->x = 1;
-    }
+    if (simParams.toroidal) {
+      if (bug->x < 0) {
+        bug->x += simParams.worldWidth;
+      } else if (bug->x >= simParams.worldWidth) {
+        bug->x -= simParams.worldWidth;
+      }
 
-    if (bug->x >= CHILD_WND_WIDTH - 1) {
-      bug->x = CHILD_WND_WIDTH - 2;
-    }
+      if (bug->y < 0) {
+        bug->y += simParams.worldHeight;
+      } else if (bug->y >= simParams.worldHeight) {
+        bug->y -= simParams.worldHeight;
+      }
+    } else {
+      // Bump walls
+      if (bug->x <= 0) {
+        bug->x = 1;
+      }
 
-    if (bug->y <= 0) {
-      bug->y = 1;
-    }
+      if (bug->x >= CHILD_WND_WIDTH - 1) {
+        bug->x = CHILD_WND_WIDTH - 2;
+      }
 
-    if (bug->y >= CHILD_WND_HEIGHT - 1) {
-      bug->y = CHILD_WND_HEIGHT - 2;
+      if (bug->y <= 0) {
+        bug->y = 1;
+      }
+
+      if (bug->y >= CHILD_WND_HEIGHT - 1) {
+        bug->y = CHILD_WND_HEIGHT - 2;
+      }
     }
   }
 }
 
 VOID drawBugsOnBoard(HBRUSH brush) {
   RECT rect;
+  int x, y;
   struct Bug *bug;
+  COLORREF color = RGB(0, 0, 0);
 
   startBugLoop();
 
   while (bug = nextBug()) {
-    rect.left = bug->x - 1;
-    rect.top = bug->y - 1;
-    rect.right = bug->x + 2;
-    rect.bottom = bug->y + 2;
-    if (brush) {
-      FillRect(backbuffDC, &rect, brush);
+    if (bug->x <= 0 || bug->x >= simParams.worldWidth - 1 ||
+        bug->y <= 0 || bug->y >= simParams.worldHeight - 1
+    ) {
+      if (!brush) {
+        color = bugColor[bug->brushIndex];
+      }
+      x = bug->x;
+      y = bug->y;
+      SetPixel(backbuffDC, px(x - 1), py(y - 1), color);
+      SetPixel(backbuffDC, px(x    ), py(y - 1), color);
+      SetPixel(backbuffDC, px(x + 1), py(y - 1), color);
+      SetPixel(backbuffDC, px(x - 1), py(y    ), color);
+      SetPixel(backbuffDC, px(x    ), py(y    ), color);
+      SetPixel(backbuffDC, px(x + 1), py(y    ), color);
+      SetPixel(backbuffDC, px(x - 1), py(y + 1), color);
+      SetPixel(backbuffDC, px(x    ), py(y + 1), color);
+      SetPixel(backbuffDC, px(x + 1), py(y + 1), color);
+
     } else {
-      FillRect(backbuffDC, &rect, bug->brush);
+      rect.left = bug->x - 1;
+      rect.top = bug->y - 1;
+      rect.right = bug->x + 2;
+      rect.bottom = bug->y + 2;
+      if (brush) {
+        FillRect(backbuffDC, &rect, brush);
+      } else {
+        FillRect(backbuffDC, &rect, bugBrush[bug->brushIndex]);
+      }
     }
   }
 }
@@ -275,6 +347,7 @@ VOID selectNewDirection() {
       num -= bug->geneWeight[i];
       if (num <= 0) {
         bug->dir = (bug->dir + i) % 6;
+        break;
       }
     }
   }
@@ -347,9 +420,12 @@ VOID doCycleStuff() {
       }
 
       gnum = rand()%6;
-      newBug->gene[gnum] = (newBug->gene[gnum] + 1) % maxGeneValue;
-      gnum = rand()%6;
-      newBug->gene[gnum] = ((newBug->gene[gnum] - 1) + maxGeneValue) % maxGeneValue;
+      i = rand()%100;
+      if (i < 34) {
+        newBug->gene[gnum] = (newBug->gene[gnum] + 1) % maxGeneValue;
+      } else if (i < 67){
+        newBug->gene[gnum] = ((newBug->gene[gnum] - 1) + maxGeneValue) % maxGeneValue;
+      }
       calculateBugWeights(newBug);
       assignBrushToBug(newBug);
       writeOutBugInfo(newBug);
@@ -359,9 +435,12 @@ VOID doCycleStuff() {
       bug->parentId = parentId;
       bug->age = 0;
       gnum = rand()%6;
-      bug->gene[gnum] = (bug->gene[gnum] + 1) % maxGeneValue;
-      gnum = rand()%6;
-      bug->gene[gnum] = ((bug->gene[gnum] - 1) + maxGeneValue) % maxGeneValue;
+      i = rand()%100;
+      if (i < 34) {
+        bug->gene[gnum] = (bug->gene[gnum] + 1) % maxGeneValue;
+      } else if (i < 67){
+        bug->gene[gnum] = ((bug->gene[gnum] - 1) + maxGeneValue) % maxGeneValue;
+      }
       calculateBugWeights(bug);
       assignBrushToBug(bug);
       writeOutBugInfo(bug);
@@ -375,12 +454,11 @@ VOID doCycleStuff() {
   }
 }
 
-VOID createInitialBugs() {
+VOID createInitialBugs(int startingBugCount) {
   int i;
   struct Bug *newBug = NULL, *lastBug = NULL;
 
   for (i = 0; i < startingBugCount; i++) {
-    printf("Creating bug\n");
     bugCount += 1;
 
     newBug = createNewBug();
@@ -417,13 +495,13 @@ VOID processBugs() {
 
 VOID assignBrushToBug(struct Bug *bug) {
   if (bug->geneWeight[0] < 26) {
-    bug->brush = bugBrush[0];
+    bug->brushIndex = 0;
   } else if (bug->geneWeight[0] < 51) {
-    bug->brush = bugBrush[1];
+    bug->brushIndex = 1;
   } else if (bug->geneWeight[0] < 76) {
-    bug->brush = bugBrush[2];
+    bug->brushIndex = 2;
   } else {
-    bug->brush = bugBrush[3];
+    bug->brushIndex = 3;
   }
 }
 
@@ -444,10 +522,21 @@ FILE *openNewLog() {
   return fopen(fname, "w");
 }
 
+VOID populateSimParams() {
+  simParams.toroidal = TRUE;
+  simParams.worldWidth = CHILD_WND_WIDTH;
+  simParams.worldHeight = CHILD_WND_HEIGHT;
+  simParams.startingBacteria = 20000;
+  simParams.startingBugs = 20;
+  simParams.reseedRate = 50;
+  simParams.delay = 5;
+}
+
 VOID Thread(PVOID pvoid) {
   HDC hdc = GetDC(childHwnd);
   struct Bug *bug, *nextBug;
   time_t rtime;
+  int i, reseeding = 0;
 
   if ((int)SendMessage(writeLogHwnd, BM_GETCHECK, 0, 0)) {
     outf = openNewLog();
@@ -455,14 +544,16 @@ VOID Thread(PVOID pvoid) {
     outf = NULL;
   }
 
+  populateSimParams();
+
   rtime = time(NULL);
   if (outf) fprintf(outf, "Random seed: %u\n", rtime);
   srand(rtime);
   //srand(1);
-  bugBrush[0] = CreateSolidBrush(RGB(100, 100, 255));
-  bugBrush[1] = CreateSolidBrush(RGB(255, 100, 100));
-  bugBrush[2] = CreateSolidBrush(RGB(100, 255, 100));
-  bugBrush[3] = CreateSolidBrush(RGB(255, 255, 255));
+
+  for (i = 0; i < 4; i++) {
+    bugBrush[i] = CreateSolidBrush(bugColor[i]);
+  }
 
   backgroundBrush = (HBRUSH)GetStockObject(BLACK_BRUSH);
 
@@ -471,17 +562,23 @@ VOID Thread(PVOID pvoid) {
   cycle = 0;
 
   backbuffDC = CreateCompatibleDC(hdc);
-  createInitialBugs();
-  paintInitialBacteria(hdc, 20000);
+  createInitialBugs(simParams.startingBugs);
+  paintInitialBacteria(hdc, simParams.startingBacteria);
   processBugs();
   updateBoard(hdc);
   InvalidateRect(reportHwnd, NULL, TRUE);
 
   while (ThreadRun) {
-//    Sleep(50);
-    AddRandomBacteria();
-//    AddRandomBacteria();
-//    AddRandomBacteria();
+    if (simParams.delay) {
+      Sleep(simParams.delay);
+    }
+
+    reseeding += simParams.reseedRate;
+    while (reseeding >= 100) {
+      AddRandomBacteria();
+      reseeding -= 100;
+    }
+
     processBugs();
     if (bugCount <= 0) {
       if (outf) {
@@ -497,6 +594,9 @@ VOID Thread(PVOID pvoid) {
     }
     cycle += 1;
   }
+
+  // Final report to true things up
+  InvalidateRect(reportHwnd, NULL, TRUE);
 
   DeleteDC(backbuffDC);
   backbuffDC = NULL;

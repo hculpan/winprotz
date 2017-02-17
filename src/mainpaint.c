@@ -10,6 +10,7 @@ HWND reportHwnd = NULL;
 HWND startPushButtonHwnd;
 HWND stopPushButtonHwnd;
 HWND writeLogHwnd;
+HWND startingBacteriaHwnd;
 
 TEXTMETRIC tm;
 
