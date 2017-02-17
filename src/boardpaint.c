@@ -5,11 +5,14 @@
 #include <process.h>
 #include <time.h>
 #include <stdio.h>
+#include <math.h>
 
 HBITMAP backbuffer = NULL;
 HDC backbuffDC = NULL;
 
 COLORREF bacteriaColor = RGB(0, 255, 0);
+
+int maxGeneValue = 6;
 
 BOOL ThreadRun = FALSE;
 
@@ -21,6 +24,7 @@ struct Bug {
   int y;
   int dir;
   int gene[6];
+  int geneWeight[6];
   int health;
   int age;
 
@@ -142,17 +146,27 @@ VOID bugsEatBacteria() {
 VOID writeOutBugInfo(struct Bug* bug) {
   if (!outf) return;
 
-  fprintf(outf, "Bug %4d [parent: %4d, age: %8d, health: %4d, x: %3d, y: %3d]\n", bug->id, bug->parentId, bug->age, bug->health, bug->x, bug->y);
-  if (bug->gene[0] == 0) {
-    fprintf(outf, "  Genetics: %d_%d_%d_%d_%d_%d [%1.2f]\n",
-      bug->gene[0], bug->gene[1], bug->gene[2], bug->gene[3], bug->gene[4], bug->gene[5],
-      0.0
-    );
-  } else {
-    fprintf(outf, "  Genetics: %d_%d_%d_%d_%d_%d [%1.2f]\n",
-      bug->gene[0], bug->gene[1], bug->gene[2], bug->gene[3], bug->gene[4], bug->gene[5],
-      (float)bug->gene[0]/(float)bug->geneTotal
-    );
+  fprintf(outf, "Bug %4d [parent: %4d, age: %8d, health: %4d, x: %3d, y: %3d]\n",
+    bug->id, bug->parentId, bug->age, bug->health, bug->x, bug->y);
+  fprintf(outf, "  Genetics: %4d %4d %4d %4d %4d %4d\n",
+    bug->gene[0], bug->gene[1], bug->gene[2], bug->gene[3], bug->gene[4], bug->gene[5]);
+  fprintf(outf, "  Weights : %4d %4d %4d %4d %4d %4d\n",
+    bug->geneWeight[0], bug->geneWeight[1], bug->geneWeight[2],
+    bug->geneWeight[3], bug->geneWeight[4], bug->geneWeight[5]);
+}
+
+VOID calculateBugWeights(struct Bug *bug) {
+  int i;
+  int gpow[6];
+
+  bug->geneTotal = 0;
+  for (i = 0; i < 6; i++) {
+    gpow[i] = (int)pow(2, bug->gene[i]);
+    bug->geneTotal += gpow[i];
+  }
+
+  for (i = 0; i < 6; i++) {
+    bug->geneWeight[i] = (int)(((double)gpow[i] / (double)bug->geneTotal) * 100);
   }
 }
 
@@ -173,15 +187,15 @@ struct Bug *createNewBug() {
   result->id = lastBugId++;
   result->parentId = 0;
   result->dir = rand()%6;
-  result->gene[0] = rand()%6;
-  result->gene[1] = rand()%6;
-  result->gene[2] = rand()%6;
-  result->gene[3] = rand()%6;
-  result->gene[4] = rand()%6;
-  result->gene[5] = rand()%6;
+  result->gene[0] = rand()%maxGeneValue;
+  result->gene[1] = rand()%maxGeneValue;
+  result->gene[2] = rand()%maxGeneValue;
+  result->gene[3] = rand()%maxGeneValue;
+  result->gene[4] = rand()%maxGeneValue;
+  result->gene[5] = rand()%maxGeneValue;
   result->health = 800;
   result->age = 0;
-  result->geneTotal = result->gene[0] + result->gene[1] + result->gene[2] + result->gene[3] + result->gene[4] + result->gene[5];
+  calculateBugWeights(result);
   assignBrushToBug(result);
 
   return result;
@@ -255,10 +269,10 @@ VOID selectNewDirection() {
   startBugLoop();
 
   while (bug = nextBug()) {
-    num = rand()%bug->geneTotal;
+    num = rand()%100;
 
     for (i = 0; i < 6; i++) {
-      num -= bug->gene[i];
+      num -= bug->geneWeight[i];
       if (num <= 0) {
         bug->dir = (bug->dir + i) % 6;
       }
@@ -333,10 +347,10 @@ VOID doCycleStuff() {
       }
 
       gnum = rand()%6;
-      newBug->gene[gnum] = (newBug->gene[gnum] + 1) % 6;
+      newBug->gene[gnum] = (newBug->gene[gnum] + 1) % maxGeneValue;
       gnum = rand()%6;
-      newBug->gene[gnum] = ((newBug->gene[gnum] - 1) + 6) % 6;
-      newBug->geneTotal = newBug->gene[0] + newBug->gene[1] + newBug->gene[2] + newBug->gene[3] + newBug->gene[4] + newBug->gene[5];
+      newBug->gene[gnum] = ((newBug->gene[gnum] - 1) + maxGeneValue) % maxGeneValue;
+      calculateBugWeights(newBug);
       assignBrushToBug(newBug);
       writeOutBugInfo(newBug);
 
@@ -345,10 +359,10 @@ VOID doCycleStuff() {
       bug->parentId = parentId;
       bug->age = 0;
       gnum = rand()%6;
-      bug->gene[gnum] = (bug->gene[gnum] + 1) % 6;
+      bug->gene[gnum] = (bug->gene[gnum] + 1) % maxGeneValue;
       gnum = rand()%6;
-      bug->gene[gnum] = ((bug->gene[gnum] - 1) + 6) % 6;
-      bug->geneTotal = bug->gene[0] + bug->gene[1] + bug->gene[2] + bug->gene[3] + bug->gene[4] + bug->gene[5];
+      bug->gene[gnum] = ((bug->gene[gnum] - 1) + maxGeneValue) % maxGeneValue;
+      calculateBugWeights(bug);
       assignBrushToBug(bug);
       writeOutBugInfo(bug);
 
@@ -402,13 +416,11 @@ VOID processBugs() {
 }
 
 VOID assignBrushToBug(struct Bug *bug) {
-  float forward = (float)bug->gene[0]/(float)bug->geneTotal;
-
-  if (forward < 0.26) {
+  if (bug->geneWeight[0] < 26) {
     bug->brush = bugBrush[0];
-  } else if (forward < 0.51) {
+  } else if (bug->geneWeight[0] < 51) {
     bug->brush = bugBrush[1];
-  } else if (forward < 0.76) {
+  } else if (bug->geneWeight[0] < 76) {
     bug->brush = bugBrush[2];
   } else {
     bug->brush = bugBrush[3];
@@ -454,7 +466,10 @@ VOID Thread(PVOID pvoid) {
 
   backgroundBrush = (HBRUSH)GetStockObject(BLACK_BRUSH);
 
+  // Initialize run variables
+  lastBugId = 1;
   cycle = 0;
+
   backbuffDC = CreateCompatibleDC(hdc);
   createInitialBugs();
   paintInitialBacteria(hdc, 20000);
