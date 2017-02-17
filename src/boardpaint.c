@@ -435,6 +435,7 @@ FILE *openNewLog() {
 VOID Thread(PVOID pvoid) {
   HDC hdc = GetDC(childHwnd);
   struct Bug *bug, *nextBug;
+  time_t rtime;
 
   if ((int)SendMessage(writeLogHwnd, BM_GETCHECK, 0, 0)) {
     outf = openNewLog();
@@ -442,7 +443,9 @@ VOID Thread(PVOID pvoid) {
     outf = NULL;
   }
 
-  srand(time(NULL));
+  rtime = time(NULL);
+  if (outf) fprintf(outf, "Random seed: %u\n", rtime);
+  srand(rtime);
   //srand(1);
   bugBrush[0] = CreateSolidBrush(RGB(100, 100, 255));
   bugBrush[1] = CreateSolidBrush(RGB(255, 100, 100));

@@ -24,10 +24,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine,
 //      freopen("CONOUT$", "w", stdout);
 //    }
 
-//    srand( (unsigned)time( NULL ) );
-    srand(time(NULL));
-    //srand(1);
-
     wndclass.cbSize         = sizeof(wndclass);
     wndclass.style          = CS_HREDRAW | CS_VREDRAW;
     wndclass.lpfnWndProc    = WndProc;
