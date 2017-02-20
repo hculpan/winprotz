@@ -15,10 +15,15 @@ COLORREF bacteriaColor = RGB(0, 255, 0);
 int maxGeneValue = 6;
 
 BOOL ThreadRun = FALSE;
+BOOL ThreadPaused = FALSE;
 
 FILE *outf;
 
 SimParams simParams;
+
+int delayChoices[] = {0, 1, 2, 3, 5, 10, 50, 250, 1000};
+
+int reseedChoices[] = {10, 20, 33, 50, 66, 75, 100, 200, 300, 500};
 
 struct Bug {
   int id;
@@ -522,14 +527,19 @@ FILE *openNewLog() {
   return fopen(fname, "w");
 }
 
+VOID rereadSimParams() {
+  simParams.delay = delayChoices[getDelaySetting()];
+  simParams.reseedRate = reseedChoices[getReseedSetting()];
+}
+
 VOID populateSimParams() {
   simParams.toroidal = TRUE;
   simParams.worldWidth = CHILD_WND_WIDTH;
   simParams.worldHeight = CHILD_WND_HEIGHT;
   simParams.startingBacteria = 20000;
   simParams.startingBugs = 20;
-  simParams.reseedRate = 50;
-  simParams.delay = 5;
+  simParams.reseedRate = reseedChoices[getReseedSetting()];
+  simParams.delay = delayChoices[getDelaySetting()];
 }
 
 VOID Thread(PVOID pvoid) {
@@ -569,6 +579,10 @@ VOID Thread(PVOID pvoid) {
   InvalidateRect(reportHwnd, NULL, TRUE);
 
   while (ThreadRun) {
+    while (ThreadPaused) {
+      Sleep(250);
+    }
+
     if (simParams.delay) {
       Sleep(simParams.delay);
     }
@@ -618,5 +632,6 @@ VOID Thread(PVOID pvoid) {
     bug = nextBug;
   }
 
+  SimStopped();
   ThreadRun = FALSE;
 }

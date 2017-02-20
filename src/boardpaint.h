@@ -9,7 +9,10 @@ VOID Thread(PVOID pvoid);
 
 VOID reportStuff(HWND hwnd, HDC hdc);
 
+VOID rereadSimParams();
+
 extern BOOL ThreadRun;
+extern BOOL ThreadPaused;
 
 extern long cycle;
 

@@ -48,7 +48,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine,
     RegisterClassEx(&wndclass);
 
     wndclass.lpfnWndProc    = ReportWndProc;
-    wndclass.hbrBackground  = (HBRUSH)GetStockObject(WHITE_BRUSH);
+    wndclass.hbrBackground  = (HBRUSH)COLOR_WINDOW;
     wndclass.lpszClassName  = szReportName;
 
     RegisterClassEx(&wndclass);
@@ -83,6 +83,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
     switch (iMsg) {
         case WM_CREATE:
             onCreate(hwnd, szChildName, szReportName);
+            SimStopped();
             return 0;
 
         case WM_SIZE:
@@ -96,18 +97,29 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
             EndPaint(hwnd, &ps);
             return 0;
 
+        case WM_HSCROLL:
+            if ((HWND)lParam == delayTrackHwnd) {
+              handleDelayTrack(delayTrackHwnd);
+            } else if ((HWND)lParam == reseedTrackHwnd) {
+              handleReseedTrack(reseedTrackHwnd);
+            }
+            return 0;
+
         case WM_COMMAND:
             if (wParam == IDC_START_BUTTON) {
               ThreadRun = TRUE;
-              EnableWindow(startPushButtonHwnd, FALSE);
-              EnableWindow(stopPushButtonHwnd, TRUE);
-              EnableWindow(writeLogHwnd, FALSE);
+              SimRunning();
               _beginthread(Thread, 0, NULL);
             } else if (wParam == IDC_STOP_BUTTON) {
-              EnableWindow(startPushButtonHwnd, TRUE);
-              EnableWindow(stopPushButtonHwnd, FALSE);
-              EnableWindow(writeLogHwnd, TRUE);
+              SimStopped();
               ThreadRun = FALSE;
+            } else if (wParam == IDC_PAUSE_BUTTON) {
+              ThreadPaused = TRUE;
+              SimPaused();
+            } else if (wParam == IDC_RESUME_BUTTON) {
+              rereadSimParams();
+              ThreadPaused = FALSE;
+              SimRunning();
             }
             return 0;
 

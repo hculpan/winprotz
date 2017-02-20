@@ -6,6 +6,7 @@
 *.map
 *.sym
 *.log
+*.err
 
 # Precompiled Headers
 *.gch
