@@ -25,13 +25,15 @@ int delayChoices[] = {0, 1, 2, 3, 5, 10, 50, 250, 1000};
 
 int reseedChoices[] = {10, 20, 33, 50, 66, 75, 100, 200, 300, 500};
 
+int initBacteriaChoices[] = {1000, 2500, 5000, 7500, 10000, 15000, 20000, 25000, 50000, 100000};
+
+int initBugChoices[] = {1, 5, 10, 20, 50, 100, 150, 200, 300, 500};
+
 struct Bug {
   int id;
   int x;
   int y;
   int dir;
-  int gene[6];
-  int geneWeight[6];
   int health;
   int age;
 
@@ -40,6 +42,15 @@ struct Bug {
   int geneTotal;
 
   int brushIndex;
+
+  // For Dewdney gene model
+  int gene[6];
+  int geneWeight[6];
+
+  // For simplified_ga gene model
+  char *ga_genes;
+  int ga_genes_length;
+  int ga_op_index;
 
   struct Bug *next;
   struct Bug *prev;
@@ -189,16 +200,22 @@ VOID writeOutBugInfo(struct Bug* bug) {
 
   fprintf(outf, "Bug %4d [parent: %4d, age: %8d, health: %4d, x: %3d, y: %3d]\n",
     bug->id, bug->parentId, bug->age, bug->health, bug->x, bug->y);
-  fprintf(outf, "  Genetics: %4d %4d %4d %4d %4d %4d\n",
-    bug->gene[0], bug->gene[1], bug->gene[2], bug->gene[3], bug->gene[4], bug->gene[5]);
-  fprintf(outf, "  Weights : %4d %4d %4d %4d %4d %4d\n",
-    bug->geneWeight[0], bug->geneWeight[1], bug->geneWeight[2],
-    bug->geneWeight[3], bug->geneWeight[4], bug->geneWeight[5]);
+  if (simParams.geneModel == dewdney) {
+    fprintf(outf, "  Genetics: %4d %4d %4d %4d %4d %4d\n",
+      bug->gene[0], bug->gene[1], bug->gene[2], bug->gene[3], bug->gene[4], bug->gene[5]);
+    fprintf(outf, "  Weights : %4d %4d %4d %4d %4d %4d\n",
+      bug->geneWeight[0], bug->geneWeight[1], bug->geneWeight[2],
+      bug->geneWeight[3], bug->geneWeight[4], bug->geneWeight[5]);
+  } else {
+    fprintf(outf, "  Genetics: %s\n", bug->ga_genes);
+  }
 }
 
 VOID calculateBugWeights(struct Bug *bug) {
   int i;
   int gpow[6];
+
+  if (simParams.geneModel == simplified_ga) return;
 
   bug->geneTotal = 0;
   for (i = 0; i < 6; i++) {
@@ -225,19 +242,34 @@ struct Bug *createNewBug() {
     }
   }
 
+  result->ga_genes = NULL;
+  result->ga_genes_length = 0;
+
   result->id = lastBugId++;
   result->parentId = 0;
   result->dir = rand()%6;
-  result->gene[0] = rand()%maxGeneValue;
-  result->gene[1] = rand()%maxGeneValue;
-  result->gene[2] = rand()%maxGeneValue;
-  result->gene[3] = rand()%maxGeneValue;
-  result->gene[4] = rand()%maxGeneValue;
-  result->gene[5] = rand()%maxGeneValue;
+
   result->health = 800;
   result->age = 0;
-  calculateBugWeights(result);
-  assignBrushToBug(result);
+
+  if (simParams.geneModel == dewdney) {
+    result->gene[0] = rand()%maxGeneValue;
+    result->gene[1] = rand()%maxGeneValue;
+    result->gene[2] = rand()%maxGeneValue;
+    result->gene[3] = rand()%maxGeneValue;
+    result->gene[4] = rand()%maxGeneValue;
+    result->gene[5] = rand()%maxGeneValue;
+    calculateBugWeights(result);
+    assignBrushToBug(result);
+  } else if (simParams.geneModel == simplified_ga) {
+    result->ga_genes_length = rand()%10 + 1;
+    result->ga_genes = (char *)malloc(result->ga_genes_length + 1);
+    for (x = 0; x < result->ga_genes_length; x++) {
+      result->ga_genes[x] = 48 + rand()%maxGeneValue;
+    }
+    result->ga_genes[result->ga_genes_length] = '\0';
+    result->ga_op_index = 0;
+  }
 
   return result;
 }
@@ -346,14 +378,22 @@ VOID selectNewDirection() {
   startBugLoop();
 
   while (bug = nextBug()) {
-    num = rand()%100;
+    if (simParams.geneModel == dewdney) {
+      num = rand()%100;
 
-    for (i = 0; i < 6; i++) {
-      num -= bug->geneWeight[i];
-      if (num <= 0) {
-        bug->dir = (bug->dir + i) % 6;
-        break;
+      for (i = 0; i < 6; i++) {
+        num -= bug->geneWeight[i];
+        if (num <= 0) {
+          bug->dir = (bug->dir + i) % 6;
+          break;
+        }
       }
+    } else if (simParams.geneModel == simplified_ga) {
+      if (bug->ga_op_index >= bug->ga_genes_length) {
+        bug->ga_op_index = 0;
+      }
+      bug->dir = (bug->dir + (bug->ga_genes[bug->ga_op_index] - 48)) % 6;
+      bug->ga_op_index++;
     }
   }
 }
@@ -394,6 +434,65 @@ struct Bug * deleteBug(struct Bug *bug) {
   return result;
 }
 
+VOID mutateBug(struct Bug *bug) {
+  int i, gnum, tmpval;
+  char *tmp;
+
+  if (simParams.geneModel == dewdney) {
+    gnum = rand()%6;
+    i = rand()%100;
+    if (i < 34) {
+      bug->gene[gnum] = (bug->gene[gnum] + 1) % maxGeneValue;
+    } else if (i < 67){
+      bug->gene[gnum] = ((bug->gene[gnum] - 1) + maxGeneValue) % maxGeneValue;
+    }
+    calculateBugWeights(bug);
+    assignBrushToBug(bug);
+  } else if (simParams.geneModel == simplified_ga && bug->ga_genes) {
+    bug->ga_op_index = 0;
+    i = rand()%100;
+    if (i < 34 && bug->ga_genes_length > 1) {  // Remove one
+      gnum = rand()%bug->ga_genes_length;
+      tmp = (char *)malloc(bug->ga_genes_length);
+      if (gnum > 0) {
+        strncpy(tmp, bug->ga_genes, gnum);
+      }
+      if (gnum < bug->ga_genes_length - 1) {
+        strcpy(tmp + gnum, bug->ga_genes + gnum + 1);
+      } else {
+        tmp[bug->ga_genes_length] = '\0';
+      }
+      free(bug->ga_genes);
+      bug->ga_genes = tmp;
+      bug->ga_genes_length--;
+    } else if (i < 67) { // Add one
+      gnum = rand()%(bug->ga_genes_length + 1);
+      tmp = (char *)malloc(bug->ga_genes_length + 2);
+      if (gnum > 0) {
+        strncpy(tmp, bug->ga_genes, gnum);
+      }
+      tmp[gnum] = 48 + rand()%maxGeneValue;
+      if (gnum < bug->ga_genes_length - 1) {
+        strcpy(tmp + gnum + 1, bug->ga_genes + gnum);
+      } else {
+        tmp[bug->ga_genes_length + 1] = '\0';
+      }
+      free(bug->ga_genes);
+      bug->ga_genes = tmp;
+      bug->ga_genes_length++;
+    } else { // Change existing
+      gnum = rand()%bug->ga_genes_length;
+      i = rand()%100;
+      tmpval = 48 - bug->ga_genes[gnum];
+      if (i < 51) {
+        bug->ga_genes[gnum] = 48 + ((tmpval + 1) % maxGeneValue);
+      } else {
+        bug->ga_genes[gnum] = 48 + (((tmpval - 1) + maxGeneValue) % maxGeneValue);
+      }
+    }
+  }
+}
+
 VOID doCycleStuff() {
   int i, gnum, parentId;
   struct Bug *bug, *newBug;
@@ -420,34 +519,27 @@ VOID doCycleStuff() {
       newBug->x = bug->x;
       newBug->y = bug->y;
       newBug->dir = (bug->dir + 3) % 6;
+
+      // Copy dewdney genes
       for (i = 0; i < 6; i++) {
         newBug->gene[i] = bug->gene[i];
       }
 
-      gnum = rand()%6;
-      i = rand()%100;
-      if (i < 34) {
-        newBug->gene[gnum] = (newBug->gene[gnum] + 1) % maxGeneValue;
-      } else if (i < 67){
-        newBug->gene[gnum] = ((newBug->gene[gnum] - 1) + maxGeneValue) % maxGeneValue;
+      // Copy simplified_ga genes
+      if (bug->ga_genes) {
+        newBug->ga_genes = (char *)malloc(bug->ga_genes_length + 1);
+        strcpy(newBug->ga_genes, bug->ga_genes);
       }
-      calculateBugWeights(newBug);
-      assignBrushToBug(newBug);
+
+      mutateBug(newBug);
       writeOutBugInfo(newBug);
 
       bug->health = bug->health / 2;
       bug->id = lastBugId++;
       bug->parentId = parentId;
       bug->age = 0;
-      gnum = rand()%6;
-      i = rand()%100;
-      if (i < 34) {
-        bug->gene[gnum] = (bug->gene[gnum] + 1) % maxGeneValue;
-      } else if (i < 67){
-        bug->gene[gnum] = ((bug->gene[gnum] - 1) + maxGeneValue) % maxGeneValue;
-      }
-      calculateBugWeights(bug);
-      assignBrushToBug(bug);
+
+      mutateBug(bug);
       writeOutBugInfo(bug);
 
       insertAfter(bug, newBug);
@@ -536,10 +628,11 @@ VOID populateSimParams() {
   simParams.toroidal = TRUE;
   simParams.worldWidth = CHILD_WND_WIDTH;
   simParams.worldHeight = CHILD_WND_HEIGHT;
-  simParams.startingBacteria = 20000;
-  simParams.startingBugs = 20;
+  simParams.startingBacteria = initBacteriaChoices[getInitBacteriaSetting()];
+  simParams.startingBugs = initBugChoices[getInitBugsSetting()];
   simParams.reseedRate = reseedChoices[getReseedSetting()];
   simParams.delay = delayChoices[getDelaySetting()];
+  simParams.geneModel = simplified_ga;
 }
 
 VOID Thread(PVOID pvoid) {

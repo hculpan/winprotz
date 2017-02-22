@@ -18,6 +18,11 @@ extern long cycle;
 
 extern int bugCount;
 
+enum GeneModel {
+  dewdney,
+  simplified_ga,
+};
+
 typedef struct SimParams {
   int toroidal;
   int worldWidth;
@@ -26,6 +31,7 @@ typedef struct SimParams {
   int startingBugs;
   int reseedRate;
   int delay;
+  enum GeneModel geneModel;
 } SimParams;
 
 #endif

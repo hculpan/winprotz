@@ -102,6 +102,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
               handleDelayTrack(delayTrackHwnd);
             } else if ((HWND)lParam == reseedTrackHwnd) {
               handleReseedTrack(reseedTrackHwnd);
+            } else if ((HWND)lParam == initBacteriaTrackHwnd) {
+              handleInitBacteriaTrack(initBacteriaTrackHwnd);
+            } else if ((HWND)lParam == initBugsTrackHwnd) {
+              handleInitBugsTrack(initBugsTrackHwnd);
             }
             return 0;
 

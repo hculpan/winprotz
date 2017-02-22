@@ -13,6 +13,8 @@ extern HWND stopPushButtonHwnd;
 extern HWND writeLogHwnd;
 extern HWND delayTrackHwnd;
 extern HWND reseedTrackHwnd;
+extern HWND initBacteriaTrackHwnd;
+extern HWND initBugsTrackHwnd;
 
 #define CHILD_WND_WIDTH   700
 #define CHILD_WND_HEIGHT  700
@@ -29,6 +31,12 @@ void onCreate(HWND hwnd, char *ChildWndClass, char *ReportWndClass);
 
 void handleDelayTrack(HWND hwnd);
 
+void handleReseedTrack(HWND hwnd);
+
+void handleInitBacteriaTrack(HWND hwnd);
+
+void handleInitBugsTrack(HWND hwnd);
+
 VOID SimStopped();
 
 VOID SimRunning();
@@ -38,5 +46,9 @@ VOID SimPaused();
 int getDelaySetting();
 
 int getReseedSetting();
+
+int getInitBacteriaSetting();
+
+int getInitBugsSetting();
 
 #endif

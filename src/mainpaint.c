@@ -19,6 +19,11 @@ HWND pauseButtonHwnd;
 HWND resumeButtonHwnd;
 HWND reseedTrackHwnd;
 HWND reseedLabelHwnd;
+HWND initBacteriaTrackHwnd;
+HWND initBacteriaLabelHwnd;
+HWND initBugsTrackHwnd;
+HWND initBugsLabelHwnd;
+
 
 char *delayText[] = {
   "None",
@@ -45,6 +50,32 @@ char *reseedText[] = {
   "5/1"
 };
 
+char *initBacteriaText[] = {
+  "1k",
+  "2.5k",
+  "5k",
+  "7.5k",
+  "10k",
+  "15k",
+  "20k",
+  "25k",
+  "50k",
+  "100k"
+};
+
+char *initBugsText[] = {
+  "1",
+  "5",
+  "10",
+  "20",
+  "50",
+  "100",
+  "150",
+  "200",
+  "300",
+  "500"
+};
+
 TEXTMETRIC tm;
 
 VOID SimStopped() {
@@ -55,6 +86,8 @@ VOID SimStopped() {
   EnableWindow(writeLogHwnd, TRUE);
   EnableWindow(delayTrackHwnd, TRUE);
   EnableWindow(reseedTrackHwnd, TRUE);
+  EnableWindow(initBacteriaTrackHwnd, TRUE);
+  EnableWindow(initBugsTrackHwnd, TRUE);
 }
 
 VOID SimRunning() {
@@ -65,6 +98,8 @@ VOID SimRunning() {
   EnableWindow(writeLogHwnd, FALSE);
   EnableWindow(delayTrackHwnd, FALSE);
   EnableWindow(reseedTrackHwnd, FALSE);
+  EnableWindow(initBacteriaTrackHwnd, FALSE);
+  EnableWindow(initBugsTrackHwnd, FALSE);
 }
 
 VOID SimPaused() {
@@ -75,6 +110,8 @@ VOID SimPaused() {
   EnableWindow(writeLogHwnd, FALSE);
   EnableWindow(delayTrackHwnd, TRUE);
   EnableWindow(reseedTrackHwnd, TRUE);
+  EnableWindow(initBacteriaTrackHwnd, FALSE);
+  EnableWindow(initBugsTrackHwnd, FALSE);
 }
 
 int getDelaySetting() {
@@ -83,6 +120,14 @@ int getDelaySetting() {
 
 int getReseedSetting() {
   return (int)SendMessage(reseedTrackHwnd, TBM_GETPOS, 0, 0);
+}
+
+int getInitBacteriaSetting() {
+  return (int)SendMessage(initBacteriaTrackHwnd, TBM_GETPOS, 0, 0);
+}
+
+int getInitBugsSetting() {
+  return (int)SendMessage(initBugsTrackHwnd, TBM_GETPOS, 0, 0);
 }
 
 // CreateTrackbar - creates and initializes a trackbar.
@@ -94,6 +139,7 @@ HWND WINAPI CreateTrackbar(
     HWND hwnd,     // handle of dialog box (parent window)
     UINT iMin,     // minimum value in trackbar range
     UINT iMax,     // maximum value in trackbar range
+    UINT iPos,     // Initial value
     UINT xPos,
     UINT yPos,
     UINT trackbarId,
@@ -130,6 +176,8 @@ HWND WINAPI CreateTrackbar(
     SendMessage(*trackHwnd, TBM_SETPAGESIZE,
         0, (LPARAM) 4);                  // new page size
 
+    SendMessage(*trackHwnd, TBM_SETPOS, TRUE, (LPARAM)iPos);
+
     return *trackHwnd;
 }
 
@@ -149,6 +197,24 @@ void handleReseedTrack(HWND hwnd) {
   pos = getReseedSetting();
   sprintf(msg, "Reseed: %s", reseedText[pos]);
   SetWindowText(reseedLabelHwnd, msg);
+}
+
+void handleInitBacteriaTrack(HWND hwnd) {
+  int pos;
+  char msg[50];
+
+  pos = getInitBacteriaSetting();
+  sprintf(msg, "Bacteria: %s", initBacteriaText[pos]);
+  SetWindowText(initBacteriaLabelHwnd, msg);
+}
+
+void handleInitBugsTrack(HWND hwnd) {
+  int pos;
+  char msg[50];
+
+  pos = getInitBugsSetting();
+  sprintf(msg, "Bugs: %s", initBugsText[pos]);
+  SetWindowText(initBugsLabelHwnd, msg);
 }
 
 void onCreate(HWND hwnd, char *ChildWndClass, char *ReportWndClass) {
@@ -194,11 +260,17 @@ void onCreate(HWND hwnd, char *ChildWndClass, char *ReportWndClass) {
   writeLogHwnd = CreateWindow("button", "Write log", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
     CHILD_WND_WIDTH + 5 + 25, 55, 100, 26, hwnd, (HMENU)0, (HINSTANCE)GetWindowLong(hwnd, GWL_HINSTANCE), NULL);
 
-  CreateTrackbar(hwnd, 0, 8, CHILD_WND_WIDTH + 5 + 25, 105, IDC_DELAY_TRACK, &delayTrackHwnd, &delayLabelHwnd);
+  CreateTrackbar(hwnd, 0, 8, 0, CHILD_WND_WIDTH + 30, 105, IDC_DELAY_TRACK, &delayTrackHwnd, &delayLabelHwnd);
   handleDelayTrack(hwnd);
 
-  CreateTrackbar(hwnd, 0, 9, CHILD_WND_WIDTH + 5 + 25, 150, IDC_DELAY_TRACK, &reseedTrackHwnd, &reseedLabelHwnd);
+  CreateTrackbar(hwnd, 0, 9, 6, CHILD_WND_WIDTH + 30, 150, IDC_DELAY_TRACK, &reseedTrackHwnd, &reseedLabelHwnd);
   handleReseedTrack(hwnd);
+
+  CreateTrackbar(hwnd, 0, 9, 6, CHILD_WND_WIDTH + 30, 195, IDC_DELAY_TRACK, &initBacteriaTrackHwnd, &initBacteriaLabelHwnd);
+  handleInitBacteriaTrack(hwnd);
+
+  CreateTrackbar(hwnd, 0, 9, 3, CHILD_WND_WIDTH + 30, 240, IDC_DELAY_TRACK, &initBugsTrackHwnd, &initBugsLabelHwnd);
+  handleInitBugsTrack(hwnd);
 
   InvalidateRect(childHwnd, NULL, TRUE);
   InvalidateRect(reportHwnd, NULL, TRUE);
