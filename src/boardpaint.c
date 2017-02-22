@@ -207,7 +207,7 @@ VOID writeOutBugInfo(struct Bug* bug) {
       bug->geneWeight[0], bug->geneWeight[1], bug->geneWeight[2],
       bug->geneWeight[3], bug->geneWeight[4], bug->geneWeight[5]);
   } else {
-    fprintf(outf, "  Genetics: %s\n", bug->ga_genes);
+    fprintf(outf, "  Genetics: %s [%d]\n", bug->ga_genes, bug->ga_genes_length);
   }
 }
 
@@ -262,7 +262,7 @@ struct Bug *createNewBug() {
     calculateBugWeights(result);
     assignBrushToBug(result);
   } else if (simParams.geneModel == simplified_ga) {
-    result->ga_genes_length = rand()%10 + 1;
+    result->ga_genes_length = rand()%20 + 1;
     result->ga_genes = (char *)malloc(result->ga_genes_length + 1);
     for (x = 0; x < result->ga_genes_length; x++) {
       result->ga_genes[x] = 48 + rand()%maxGeneValue;
@@ -389,11 +389,11 @@ VOID selectNewDirection() {
         }
       }
     } else if (simParams.geneModel == simplified_ga) {
-      if (bug->ga_op_index >= bug->ga_genes_length) {
-        bug->ga_op_index = 0;
-      }
+      //if (outf) fprintf(outf, "MOVE for cycle %d\n", cycle);
       bug->dir = (bug->dir + (bug->ga_genes[bug->ga_op_index] - 48)) % 6;
-      bug->ga_op_index++;
+      //if (outf) fprintf(outf, "  Using %d at %d to select new dir %d\n",
+      //  bug->ga_genes[bug->ga_op_index] - 48, bug->ga_op_index, bug->dir);
+      bug->ga_op_index = (bug->ga_op_index + 1) % bug->ga_genes_length;
     }
   }
 }
@@ -429,13 +429,15 @@ struct Bug * deleteBug(struct Bug *bug) {
 
   result = bug->next;
 
+  if (bug->ga_genes) free(bug->ga_genes);
   free(bug);
 
   return result;
 }
 
 VOID mutateBug(struct Bug *bug) {
-  int i, gnum, tmpval;
+  int i, gnum;
+  char tmpval;
   char *tmp;
 
   if (simParams.geneModel == dewdney) {
@@ -453,6 +455,8 @@ VOID mutateBug(struct Bug *bug) {
     i = rand()%100;
     if (i < 34 && bug->ga_genes_length > 1) {  // Remove one
       gnum = rand()%bug->ga_genes_length;
+      if (outf)
+        fprintf(outf, "Mutation for %d: Remove %d\n", bug->id, gnum);
       tmp = (char *)malloc(bug->ga_genes_length);
       if (gnum > 0) {
         strncpy(tmp, bug->ga_genes, gnum);
@@ -472,6 +476,8 @@ VOID mutateBug(struct Bug *bug) {
         strncpy(tmp, bug->ga_genes, gnum);
       }
       tmp[gnum] = 48 + rand()%maxGeneValue;
+      if (outf)
+        fprintf(outf, "Mutation for %d: Add %s at %d\n", bug->id, tmp[gnum], gnum);
       if (gnum < bug->ga_genes_length - 1) {
         strcpy(tmp + gnum + 1, bug->ga_genes + gnum);
       } else {
@@ -489,6 +495,8 @@ VOID mutateBug(struct Bug *bug) {
       } else {
         bug->ga_genes[gnum] = 48 + (((tmpval - 1) + maxGeneValue) % maxGeneValue);
       }
+      if (outf)
+        fprintf(outf, "Mutation for %d: Set %d from %s to %s\n", bug->id, gnum, 48 + tmpval, bug->ga_genes[gnum]);
     }
   }
 }
@@ -527,8 +535,10 @@ VOID doCycleStuff() {
 
       // Copy simplified_ga genes
       if (bug->ga_genes) {
+        if (newBug->ga_genes) free(newBug->ga_genes);
         newBug->ga_genes = (char *)malloc(bug->ga_genes_length + 1);
         strcpy(newBug->ga_genes, bug->ga_genes);
+        newBug->ga_genes_length = bug->ga_genes_length;
       }
 
       mutateBug(newBug);
