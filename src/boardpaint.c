@@ -642,7 +642,7 @@ VOID populateSimParams() {
   simParams.startingBugs = initBugChoices[getInitBugsSetting()];
   simParams.reseedRate = reseedChoices[getReseedSetting()];
   simParams.delay = delayChoices[getDelaySetting()];
-  simParams.geneModel = simplified_ga;
+  simParams.geneModel = dewdney;
 }
 
 VOID Thread(PVOID pvoid) {
